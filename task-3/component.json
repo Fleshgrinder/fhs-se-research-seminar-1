@@ -1,0 +1,11 @@
+{
+  "name": "se-research-seminar-1-task-3",
+  "version": "0.0.1",
+  "dependencies": {
+    "improved-pngquant": "git://github.com/pornel/improved-pngquant.git",
+    "imgmin": "git://github.com/rflynn/imgmin.git",
+    "jquery": "~1.8.0",
+    "bootstrap": "~2.3.1",
+    "HighchartsPHP": "git://github.com/ghunti/HighchartsPHP.git"
+  }
+}
