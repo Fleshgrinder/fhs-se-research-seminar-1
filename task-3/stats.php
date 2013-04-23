@@ -76,7 +76,7 @@ if (file_exists($statsFilePath)) {
 
           $stat[$type]['files'][$delta] =
             '<figure>' .
-              '<img src="data/' . $folder . '/' . $website . '/' . $file['name'] . '" alt="" ' . $attr . '>' .
+              '<img data-original="data/' . $folder . '/' . $website . '/' . $file['name'] . '" src="grey.gif" alt="" ' . $attr . '>' .
               '<figcaption>' .
                 'Size: <strong>' . $file['size'] . '&nbsp;bytes</strong><br>Format: <strong>' . strtoupper($file['format']) . '</strong>' .
               '</figcaption>' .
@@ -103,16 +103,18 @@ if (file_exists($statsFilePath)) {
 
       $tmp['accordion'] .= create_accordion_group(
         $website,
-        '<table class="table table-bordered table-striped">' .
-          '<thead class="header">' .
-            '<tr>' .
-              '<th>Source</th>' .
-              '<th>Optimized</th>' .
-              '<th>WebP</th>' .
-            '</tr>' .
-          '</thead>' .
-          '<tbody>' . $tmp['tmp'] . '</tbody>' .
-        '</table>'
+        '<div class="accordion-inner">' .
+          '<table class="table table-bordered table-striped">' .
+            '<thead class="header">' .
+              '<tr>' .
+                '<th>Source</th>' .
+                '<th>Optimized</th>' .
+                '<th>WebP</th>' .
+              '</tr>' .
+            '</thead>' .
+            '<tbody>' . $tmp['tmp'] . '</tbody>' .
+          '</table>' .
+        '</div>'
       );
 
       unset($tmp['tmp']);

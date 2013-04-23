@@ -24,13 +24,34 @@
   <script src="//code.highcharts.com/highcharts.js"></script>
   <script src="components/bootstrap/js/bootstrap-transition.js"></script>
   <script src="components/bootstrap/js/bootstrap-collapse.js"></script>
-  <script>$(document).ready(function () {
-    $.get('stats.php', function (response) {
-      var $response = $(response).hide(), $loading = $('#loading');
-      $loading.fadeOut('slow', function () {
-        $loading.replaceWith($response.fadeIn('slow'));
+  <script src="components/jquery.scrollTo/jquery.scrollTo.min.js"></script>
+  <script>
+    ;(function ($, window, document) {
+      var $window = $(window);
+      var $document = $(document);
+      $document.ready(function () {
+        $document.on({ click: function (e) {
+          var self = this;
+          e.preventDefault();
+          $($(this).attr('href'))
+            .on('shown', function () {
+              $window.scrollTo(self, { duration: 1000 });
+            })
+            .find('img').each(function () {
+              var $this = $(this);
+              $this.attr('src', $this.data('original'));
+            })
+          ;
+          return false;
+        }}, 'a[href^="#"]');
+        $.get('stats.php', function (response) {
+          var $response = $(response).hide(), $loading = $('#loading');
+          $loading.fadeOut('slow', function () {
+            $loading.replaceWith($response.fadeIn('slow'));
+          });
+        });
       });
-    });
-  });</script>
+    })(jQuery, window, document);
+  </script>
 </body>
 </html>
