@@ -371,6 +371,12 @@ class Task3Command extends Command {
       return NULL;
     }
 
+    if (isset($options['stylesheetPath'])) {
+      /* @var $parsedURL array */
+      $parsedURL = parse_url($options['stylesheetPath']);
+      $hostname = sprintf('%s://%s', $parsedURL['scheme'], $parsedURL['host']);
+    }
+
     if (!filter_var($url, FILTER_VALIDATE_URL)) {
       if (!filter_var($url, FILTER_VALIDATE_URL, FILTER_FLAG_HOST_REQUIRED)) {
         // Check if the given URL starts with two dots and try to resolve the relative path to an absolute one.
@@ -429,45 +435,35 @@ class Task3Command extends Command {
    *   Returns <code>FALSE</code> if something is wrong with this image.
    */
   private function saveImage($src, $folder) {
-    /* @var $pathinfo array */
-    $pathinfo = pathinfo($src);
-
-    // An alternative to dropping the file would be to check the HTTP headers returned by the server and assign
-    // the correct extension according to the returned MIME type. For now we simply drop these files.
-    // Also check if the extension is within our allowed extension. We do not need to include webp images at this point
-    // because we use Firefox in our User Agent and nobody should be serving webp images to a Firefox browser.
-    if (empty($pathinfo['extension']) || !in_array($pathinfo['extension'], [ 'jpg', 'jpeg', 'gif', 'png' ])) {
+    /* @var $type int */
+    if (!($type = @getimagesize($src)[2])) {
       return FALSE;
     }
 
-    // Most UNIX like file systems only allow a maximum filename length of 255, truncate if necessary. For our
-    // purpose shorter filenames are okay, therefor we directly check for 200 characters.
-    if (strlen($pathinfo['filename']) > 200) {
-      $pathinfo['filename'] = substr($pathinfo['filename'], 0, 200);
+    /* @var $ext string */
+    $ext = '.';
+
+    switch ($type) {
+      case IMAGETYPE_GIF:
+        $ext .= 'gif';
+        break;
+
+      case IMAGETYPE_JPEG:
+        $ext .= 'jpg';
+        break;
+
+      case IMAGETYPE_PNG:
+        $ext .= 'png';
+        break;
+
+      default:
+        return FALSE;
     }
 
-    /* @var $downloadFileHandle resource */
-    if (!($downloadFileHandle = @fopen($src, 'rb'))) {
-      return FALSE;
-    }
+    $this->out->writeln($folder . DIRECTORY_SEPARATOR . md5($src) . $ext);
 
-    /* @var $imageFileHandle resource */
-    if (!($imageFileHandle = fopen($folder . DIRECTORY_SEPARATOR . $pathinfo['filename'] . '.' . $pathinfo['extension'], 'wb'))) {
-      return FALSE;
-    }
-
-    /* @var $length int */
-    $length = 1024 * 8;
-
-    while (!feof($downloadFileHandle)) {
-      fwrite($imageFileHandle, fread($downloadFileHandle, $length), $length);
-    }
-
-    foreach ([ $downloadFileHandle, $imageFileHandle ] as $fileHandle) {
-      fclose($fileHandle);
-    }
-
-    return TRUE;
+    // We have to create a hash for the filename, because images are sometimes identified by path and not by filename.
+    return copy($src, $folder . DIRECTORY_SEPARATOR . md5($src) . $ext);
   }
 
   /**
@@ -614,7 +610,7 @@ class Task3Command extends Command {
       /* @var $imagesCount int */
       if (($imagesCount = count($images)) > 0) {
         $progress->setFormat('  Downloading images                  <comment>[%bar%]</comment> %percent%% <comment>%current%/%max%</comment>');
-        $progress->start($this->out, $imagesCount);
+//        $progress->start($this->out, $imagesCount);
 
         foreach ($images as $image) {
           /* @var $src string */
@@ -622,14 +618,16 @@ class Task3Command extends Command {
             continue;
           }
           $this->saveImage($src, $websitePath);
-          $progress->advance();
+//          $progress->advance();
         }
 
-        $progress->finish();
+//        $progress->finish();
       }
 
       /* @var $links array */
       $links = $crawler->filter('link');
+
+      /* DEV */ $links = []; /* DEV */
 
       /* @var $linksCount int */
       if (count($links) > 0) {
@@ -949,7 +947,7 @@ class Task3Command extends Command {
     }
 
     $this->out->writeln(sprintf(
-      PHP_EOL . 'Go to <bg=blue;options=underscore>stats.html</bg=blue;options=underscore> to have a look at these stats with some eye candy!' . PHP_EOL
+      PHP_EOL . 'Go to <bg=blue;options=underscore>http://alpha.movlib.org/research/stats.html</bg=blue;options=underscore> to have a look at these stats with some eye candy!' . PHP_EOL
     ));
 
     return $this;

@@ -70,7 +70,9 @@ if (file_exists($statsFilePath)) {
           $folder = 'images' . ($type !== 'images' ? '-' . $type : '');
 
           /* @var $attr string */
-          $attr = getimagesize(CWD . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . $folder . DIRECTORY_SEPARATOR . $website . DIRECTORY_SEPARATOR . $file['name'])[3];
+          if (!(@$attr = getimagesize(CWD . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . $folder . DIRECTORY_SEPARATOR . $website . DIRECTORY_SEPARATOR . $file['name'])[3])) {
+            $attr = '';
+          }
 
           $stat[$type]['files'][$delta] =
             '<figure>' .
@@ -149,13 +151,20 @@ if (file_exists($statsFilePath)) {
   /* @var $kbSavingsWebp float */
   $kbSavingsWebp = number_format(($tmp['images-total'] - $tmp['webp-total']) / 1024, 2);
 
+  /* @var $containerHeight int */
+  $containerHeight = count($stats) * 60;
+
+  if (400 > $containerHeight) {
+    $containerHeight = 400;
+  }
+
   $container =
     '<div class="alert alert-info">' .
       '<h4>Summary</h4>' .
       'Optimization saved ' . $percentSavingsImgmin . '&nbsp;% (' . $kbSavingsImgmin . '&nbsp;KB) in total.<br>' .
       'WebP conversion saved ' . $percentSavingsWebp . '&nbsp;% (' . $kbSavingsWebp . '&nbsp;KB) in total.' .
     '</div>' .
-    '<div id="container"></div>' .
+    '<div id="container" style="height:' . $containerHeight . 'px"></div>' .
     '<script>' . $chart->render('chart1') . '</script>' .
     '<h2>Side by side comparison</h2>' .
     '<div class="alert alert-info">Please note that you need Google Chrome or Opera to see the WebP images.</div>' .
