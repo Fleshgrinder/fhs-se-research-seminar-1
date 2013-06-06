@@ -208,6 +208,7 @@ class Task3Command extends Command {
    */
   private function download() {
     if (file_exists($this->zipFilePath)) {
+      $this->out->writeln('<info>Skipping Alexa download, ZIP file already present.</info>');
       return $this;
     }
 
@@ -284,6 +285,7 @@ class Task3Command extends Command {
     }
 
     if (file_exists($this->csvFilePath)) {
+      $this->out->writeln('<info>Skipping ZIP extraction, CSV already present.</info>');
       return $this;
     }
 
@@ -323,6 +325,7 @@ class Task3Command extends Command {
     }
 
     if (file_exists($this->alexaToplistFilePath)) {
+      $this->out->writeln('<info>Skipping generation of Alexa toplist URLs, file already present.</info>');
       return $this;
     }
 
@@ -337,7 +340,7 @@ class Task3Command extends Command {
     $i = 1;
 
     while (($line = fgets($csvFileHandle)) !== FALSE && $i <= $this->hostCount) {
-      $this->hosts[] = trim(split(',', $line)[1]);
+      $this->hosts[] = trim(explode(',', $line)[1]);
       $i++;
     }
 
@@ -538,6 +541,7 @@ class Task3Command extends Command {
     }
 
     if (file_exists($this->hostsImagesPath)) {
+      $this->out->writeln('<info>Skipping download of images, already fetched.</info>');
       return $this;
     }
 
@@ -557,6 +561,8 @@ class Task3Command extends Command {
     // See http://www.php.net/manual/en/function.curl-setopt.php for all possible options.
     curl_setopt_array($ch, [
       CURLOPT_AUTOREFERER => TRUE,
+      CURLOPT_CONNECTTIMEOUT => 30,
+      CURLOPT_TIMEOUT => 60,
       CURLOPT_FAILONERROR => TRUE,
       CURLOPT_FOLLOWLOCATION => TRUE,
       CURLOPT_FORBID_REUSE => FALSE,
@@ -588,81 +594,85 @@ class Task3Command extends Command {
       /* @var $homepage string */
       $homepage = curl_exec($ch);
 
-      /* @var $crawler \Symfony\Component\DomCrawler\Crawler */
-      $crawler = new Crawler($homepage);
+      try {
+        /* @var $crawler \Symfony\Component\DomCrawler\Crawler */
+        $crawler = new Crawler($homepage);
 
-      // No clue what facebook is doing, but do not process if this is facebook.
-      if ($hostname !== 'facebook.com') {
-        /* @var $metaRefresh string */
-        if (count($metaRefresh = $crawler->filter('meta[http-equiv="refresh"]')) > 0) {
-          /**
-           * @todo Should we follow more then one meta refresh?
-           */
-          curl_setopt($ch, CURLOPT_URL, preg_replace('/[0-9]+;url=/i', '', $metaRefresh->attr('content')));
-          $homepage = curl_exec($ch);
-          $crawler = new Crawler($homepage);
-        }
-      }
-
-      /* @var $images array */
-      $images = $crawler->filter('img');
-
-      /* @var $imagesCount int */
-      if (($imagesCount = count($images)) > 0) {
-        $progress->setFormat('  Downloading images                  <comment>[%bar%]</comment> %percent%% <comment>%current%/%max%</comment>');
-//        $progress->start($this->out, $imagesCount);
-
-        foreach ($images as $image) {
-          /* @var $src string */
-          if (!($src = $this->normalizeURL($image->getAttribute('src'), $hostname))) {
-            continue;
+        // No clue what facebook is doing, but do not process if this is facebook.
+        if ($hostname !== 'facebook.com') {
+          /* @var $metaRefresh string */
+          if (count($metaRefresh = $crawler->filter('meta[http-equiv="refresh"]')) > 0) {
+            /**
+             * @todo Should we follow more then one meta refresh?
+             */
+            curl_setopt($ch, CURLOPT_URL, preg_replace('/[0-9]+;url=/i', '', $metaRefresh->attr('content')));
+            $homepage = curl_exec($ch);
+            $crawler = new Crawler($homepage);
           }
-          $this->saveImage($src, $websitePath);
-//          $progress->advance();
         }
 
-//        $progress->finish();
-      }
+        /* @var $images array */
+        $images = $crawler->filter('img');
 
-      /* @var $links array */
-      $links = $crawler->filter('link');
-
-      /* DEV */ $links = []; /* DEV */
-
-      /* @var $linksCount int */
-      if (count($links) > 0) {
-        $i = 1;
-        foreach ($links as $link) {
-          // Is this save?
-          if ($link->getAttribute('rel') !== 'stylesheet') {
-            continue;
-          }
-
-          /* @var $stylesheetPath string */
-          $stylesheetPath = $this->normalizeURL($link->getAttribute('href'), $hostname, [ 'keepQueryString' => TRUE ]);
-
-          /* @var $stylesheet string */
-          $stylesheet = file_get_contents($stylesheetPath);
-
-          /* @var $images array */
-          if (!($images = $this->extractCSSURLs($stylesheet))) {
-            continue;
-          }
-
-          $progress->setFormat('  Downloading CSS stylesheet ' . $i++ . ' images <comment>[%bar%]</comment> %percent%% <comment>%current%/%max%</comment>');
-          $progress->start($this->out, count($images));
+        /* @var $imagesCount int */
+        if (($imagesCount = count($images)) > 0) {
+          $progress->setFormat('  Downloading images                  <comment>[%bar%]</comment> %percent%% <comment>%current%/%max%</comment>');
+  //        $progress->start($this->out, $imagesCount);
 
           foreach ($images as $image) {
             /* @var $src string */
-            if (!($src = $this->normalizeURL($image, $hostname, [ 'stylesheetPath' => $stylesheetPath ]))) {
+            if (!($src = $this->normalizeURL($image->getAttribute('src'), $hostname))) {
               continue;
             }
             $this->saveImage($src, $websitePath);
-            $progress->advance();
+  //          $progress->advance();
           }
 
-          $progress->finish();
+  //        $progress->finish();
         }
+
+        /* @var $links array */
+        $links = $crawler->filter('link');
+
+        /* DEV */ $links = []; /* DEV */
+
+        /* @var $linksCount int */
+        if (count($links) > 0) {
+          $i = 1;
+          foreach ($links as $link) {
+            // Is this save?
+            if ($link->getAttribute('rel') !== 'stylesheet') {
+              continue;
+            }
+
+            /* @var $stylesheetPath string */
+            $stylesheetPath = $this->normalizeURL($link->getAttribute('href'), $hostname, [ 'keepQueryString' => TRUE ]);
+
+            /* @var $stylesheet string */
+            $stylesheet = file_get_contents($stylesheetPath);
+
+            /* @var $images array */
+            if (!($images = $this->extractCSSURLs($stylesheet))) {
+              continue;
+            }
+
+            $progress->setFormat('  Downloading CSS stylesheet ' . $i++ . ' images <comment>[%bar%]</comment> %percent%% <comment>%current%/%max%</comment>');
+            $progress->start($this->out, count($images));
+
+            foreach ($images as $image) {
+              /* @var $src string */
+              if (!($src = $this->normalizeURL($image, $hostname, [ 'stylesheetPath' => $stylesheetPath ]))) {
+                continue;
+              }
+              $this->saveImage($src, $websitePath);
+              $progress->advance();
+            }
+
+            $progress->finish();
+          }
+        }
+      } catch (\Exception $e) {
+        $this->out->writeln("<error>Exception: {$e->getMessage()}</error>");
       }
 
       /**
@@ -688,6 +698,7 @@ class Task3Command extends Command {
     }
 
     if (file_exists($this->optimizedFilePath)) {
+      $this->out->writeln('<info>Skipping optimization, hidden optimized file present.</info>');
       return $this;
     }
 
@@ -800,10 +811,14 @@ class Task3Command extends Command {
           /* @var $imageTmp string */
           $imageTmp = $hostPaths['tmp'] . DIRECTORY_SEPARATOR . $imageNameWithExtension;
 
+//          imagepng(imagecreatefromgif($image), $imageTmp, 9, PNG_ALL_FILTERS);
           /* @var $imagick \Imagick */
           $imagick = new \Imagick();
           $imagick->readimage($image);
           $imagick->setimageformat('png');
+          $imagick->setCompression(\Imagick::COMPRESSION_ZIP);
+          $imagick->setCompressionQuality(9);
+          $imagick->stripimage();
           $imagick->writeimage($imageTmp);
 
           // Update path with new path.
@@ -947,7 +962,7 @@ class Task3Command extends Command {
     }
 
     $this->out->writeln(sprintf(
-      PHP_EOL . 'Go to <bg=blue;options=underscore>http://alpha.movlib.org/research/stats.html</bg=blue;options=underscore> to have a look at these stats with some eye candy!' . PHP_EOL
+      PHP_EOL . 'Go to <bg=blue;options=underscore>https://test.alpha.movlib.org/research/stats.html</bg=blue;options=underscore> to have a look at these stats with some eye candy!' . PHP_EOL
     ));
 
     return $this;
@@ -1037,7 +1052,6 @@ class Task3Command extends Command {
     $this->download()->extract()->alexa()->fetch()->optimize()->statistics()->printStats();
   }
 
-
 }
 
 /**
@@ -1047,6 +1061,7 @@ class Task3Command extends Command {
  * @package SEResearchSeminar1
  */
 class Task3Application extends Application {
+
   /**
    * Returns the name of the command our application shall always execute.
    *
@@ -1078,6 +1093,7 @@ class Task3Application extends Application {
     $inputDefinition->setArguments();
     return $inputDefinition;
   }
+
 }
 
 // Create new instance of our application (set name and version) and directly run it.

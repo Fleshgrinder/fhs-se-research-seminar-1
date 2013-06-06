@@ -1,5 +1,7 @@
 <?php
 
+define('CWD', getcwd());
+
 function create_accordion_group($title, $content) {
   static $counter = 0;
 
@@ -12,8 +14,6 @@ function create_accordion_group($title, $content) {
     '</div>'
   ;
 }
-
-define('CWD', getcwd());
 
 require CWD . DIRECTORY_SEPARATOR . 'components' . DIRECTORY_SEPARATOR . 'HighchartsPHP' . DIRECTORY_SEPARATOR . 'Highchart.php';
 
@@ -43,8 +43,8 @@ if (file_exists($statsFilePath)) {
     'accordion' => '',
   ];
 
-  /* @var $chart \Highchart */
-  $chart = new \Highchart();
+  /* @var $chart Highchart */
+  $chart = new Highchart();
 
   $chart->chart->renderTo = 'container';
   $chart->chart->type = 'bar';
@@ -193,6 +193,7 @@ if (file_exists($statsFilePath)) {
     '<p>Source code is available on <a href="https://github.com/Fleshgrinder/se-research-seminar-1/tree/master/task-3">GitHub</a>.</p>' .
     '<p>Please feel free to write me over at GitHub if you have any insights on improving my work.</p>'
   ;
+  file_put_contents(CWD . DIRECTORY_SEPARATOR . "statsresults.html", $container);
 }
 
 echo $container;
